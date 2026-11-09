@@ -185,7 +185,7 @@ int main(int argc, char **argv)
     }
 
     // first pass: every frame, small, for the analysis
-    snprintf(cmd, sizeof cmd, "ffmpeg -v error -i %s -vf scale=%d:%d:flags=area -fps_mode passthrough -f rawvideo -pix_fmt rgb24 -", q, aw, ah);
+    snprintf(cmd, sizeof cmd, "ffmpeg -v fatal -i %s -vf scale=%d:%d:flags=area -fps_mode passthrough -f rawvideo -pix_fmt rgb24 -", q, aw, ah);
     p = popen(cmd, "r");
     size_t fs = (size_t)aw * ah * 3;
     unsigned char *rgb = malloc(fs);
@@ -252,7 +252,7 @@ int main(int argc, char **argv)
     if (pw > sw)
         pw = sw;
     int ph = (int)((double)sh * pw / sw / 2 + 0.5) * 2;
-    snprintf(cmd, sizeof cmd, "ffmpeg -v error -i %s -vf scale=%d:%d:flags=area -fps_mode passthrough -f rawvideo -pix_fmt rgb24 -", q, pw, ph);
+    snprintf(cmd, sizeof cmd, "ffmpeg -v fatal -i %s -vf scale=%d:%d:flags=area -fps_mode passthrough -f rawvideo -pix_fmt rgb24 -", q, pw, ph);
     p = popen(cmd, "r");
     size_t ps = (size_t)pw * ph * 3;
     unsigned char *big = malloc(ps);
