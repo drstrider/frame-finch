@@ -540,6 +540,49 @@ static int active_cells(const frame *fr)
     return c;
 }
 
+// How many touches (given in phone time) are answered by a change on screen 20-700 ms later, if video 0 is at wall0.
+static int touches_answered(const ff *f, double wall0)
+{
+    int n = 0;
+    for (int i = 0; i < f->ntc; i++)
+    {
+        if (!f->tc[i].wall || f->tc[i].kind != 'd')
+            continue;
+        double t = f->tc[i].t - wall0;
+        for (int j = 0; j < f->nfr && f->fr[j].t <= t + 700; j++)
+        {
+            if (f->fr[j].t >= t + 20 && active_cells(&f->fr[j]))
+            {
+                n++;
+                break;
+            }
+        }
+    }
+    return n;
+}
+
+// The creation time only gives the second when the recording ends on a change: a still tail leaves it a second or so out.
+// Touches settle it: of the whole seconds near the guess, keep the one where the most touches are followed by a change.
+static void second_from_touches(ff *f)
+{
+    double best = f->wall0;
+    int most = touches_answered(f, best);
+    for (int k = -2; k <= 2; k++)
+    {
+        int n = touches_answered(f, f->wall0 + k * 1000.0);
+        if (n > most)
+        {
+            most = n;
+            best = f->wall0 + k * 1000.0;
+        }
+    }
+    if (best != f->wall0)
+    {
+        f->wall0 = best;
+        strncat(f->how, "; the second moved to where the touches are followed by changes", sizeof f->how - strlen(f->how) - 1);
+    }
+}
+
 // ---- 3. Bursts ----
 
 void ff_finish(ff *f, double duration_ms)
@@ -554,6 +597,9 @@ void ff_finish(ff *f, double duration_ms)
         f->have_wall = 1;
         snprintf(f->how, sizeof f->how, "from the file's creation time only (±0.5 s); no on-screen seconds clock was found");
     }
+
+    if (f->have_wall == 1)
+        second_from_touches(f);
 
     // touches and log lines given in phone time move onto the video's timeline
     for (int i = 0; i < f->ntc; i++)
