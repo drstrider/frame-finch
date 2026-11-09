@@ -1,0 +1,59 @@
+name: release
+
+# A tag like v0.1.0 builds frame-finch for Linux (static, x86_64 and arm64) and macOS (arm64) and attaches them,
+# with the skill and install.sh, to a release.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq musl-tools
+      - run: make CC=musl-gcc CFLAGS="-O2 -std=c99 -Wall -static"
+      - run: file frame-finch | grep -q "statically linked"
+      - run: (./frame-finch || true) 2>&1 | grep -q usage
+      - run: mv frame-finch frame-finch-linux-${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frame-finch-linux-${{ matrix.arch }}
+          path: frame-finch-linux-${{ matrix.arch }}
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: make
+      - run: (./frame-finch || true) 2>&1 | grep -q usage
+      - run: mv frame-finch frame-finch-macos-arm64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frame-finch-macos-arm64
+          path: frame-finch-macos-arm64
+
+  release:
+    needs: [linux, macos]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - run: chmod +x frame-finch-* && cp skill/SKILL.md .
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" frame-finch-* SKILL.md install.sh --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --notes "Prebuilt frame-finch. It still needs ffmpeg and ffprobe on the PATH."
