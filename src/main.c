@@ -111,11 +111,11 @@ int main(int argc, char **argv)
     quote(q, sizeof q, video);
 
     // size, length, and when the file was made
-    int sw = 0, sh = 0, utc_off = 0, have_off = 0;
+    int sw = 0, sh = 0, utc_off = 0, have_off = 0, android = 0;
     double dur = 0;
     long long created = 0;
     snprintf(cmd, sizeof cmd,
-             "ffprobe -v error -select_streams v:0 -show_entries stream=width,height:format=duration:format_tags=creation_time,com.samsung.android.utc_offset -of default=nw=1 %s",
+             "ffprobe -v error -select_streams v:0 -show_entries stream=width,height:format=duration:format_tags=creation_time,com.samsung.android.utc_offset,com.android.version -of default=nw=1 %s",
              q);
     FILE *p = popen(cmd, "r");
     if (!p)
@@ -127,6 +127,8 @@ int main(int argc, char **argv)
             continue;
         if (sscanf(line, "TAG:creation_time=%d-%d-%dT%d:%d:%d", &Y, &M, &D, &h, &m, &s) == 6)
             created = days_from_civil(Y, M, D) * 86400 + h * 3600 + m * 60 + s;
+        if (!strncmp(line, "TAG:com.android.version=", 24))
+            android = 1;
         char sign;
         int oh, om;
         if (sscanf(line, "TAG:com.samsung.android.utc_offset=%c%2d%2d", &sign, &oh, &om) == 3)
@@ -145,7 +147,7 @@ int main(int argc, char **argv)
         struct tm lt = *localtime(&now);
         utc_off = (int)lt.tm_gmtoff;
     }
-    int samsung = have_off;     // Samsung's recorder stamps the file when it finishes
+    int samsung = have_off || android;      // Android recorders (Samsung's and screenrecord) stamp the file when it finishes
 
     // every frame's time (a recorder that only writes a frame when the screen changes makes these uneven)
     snprintf(cmd, sizeof cmd, "ffprobe -v error -select_streams v:0 -show_entries frame=pts_time -of csv=p=0 %s", q);
