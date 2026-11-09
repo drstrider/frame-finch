@@ -5,7 +5,7 @@ description: Measure UI lag from a screen recording - when the screen changed af
 
 # Frame Finch
 
-`frame-finch VIDEO.mp4 [--log APP.log] [--touches FILE] [--start HH:MM:SS.mmm] [-o OUT.html]` (source: `~/coding/frame-finch`, `make` to rebuild)
+`frame-finch VIDEO.mp4 [--log APP.log] [--touches FILE] [--start HH:MM:SS.mmm|EPOCH_MS] [-o OUT.html]` (source: `~/coding/frame-finch`, `make` to rebuild)
 writes one self-contained `VIDEO.finch.html`.
 
 1. Run it. If the app writes a log with `HH:MM:SS.mmm` at the start of each line, pass it with `--log APP.log` (its lines land on the timeline in phone time).
@@ -17,4 +17,5 @@ Notes:
 - A frame is only recorded when the screen changes (Samsung/Android recorders), so "still for N ms before" is real stillness.
 - Times are frame capture times; read a change as +0..17 ms. Phone time comes from an on-screen clock showing seconds, if the app has one (about ±25 ms), and the file's creation time; without one, use `--start` or read times as video ms.
 - Without a touch log, the touch is the first small change at the tapped control (a ripple or highlight); say so. In other apps, turn on Developer options → "Show taps" before recording so every touch shows as a dot.
+- A TOUCH line gives the first frame that changed after it (`first change +N ms (#burst fN)`), even when that frame is inside a change that began earlier (a fading toast, a playing video). A touch made while the screen was already changing also gets `during #B, which stopped +N ms`: how long a pause or stop took to show.
 - Touch list format for `--touches`: one per line, `TIME down|move|up X Y`; TIME is `HH:MM:SS.mmm` phone time, epoch ms, or video ms written `v1234.5`.

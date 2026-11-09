@@ -2,11 +2,11 @@
 // size, length, creation time and every frame's timestamp, and ffmpeg decodes the frames and pipes them
 // in as raw RGB. The core (ff.c) does the rest.
 //
-//   frame-finch VIDEO [-o OUT.html] [--touches FILE] [--log FILE] [--start HH:MM:SS.mmm] [--full | --pic-width N]
+//   frame-finch VIDEO [-o OUT.html] [--touches FILE] [--log FILE] [--start HH:MM:SS.mmm|EPOCH_MS] [--full | --pic-width N]
 //
 // --touches: one touch per line, "TIME down|move|up X Y"; TIME is HH:MM:SS.mmm (phone time), epoch ms, or video ms ("v1234.5").
 // --log: any log whose lines start with HH:MM:SS.mmm (an app's own debug log); lines inside the video's time span go on the timeline.
-// --start: the phone time at video 0, when you know it better than the file does.
+// --start: the phone time at video 0 (HH:MM:SS.mmm, or epoch ms), when you know it better than the file does.
 // Key frame pictures are 540 px wide (--pic-width N, or --full for the video's own size); the analysis runs at 360.
 //
 // The steps: probe the file, decode it small and feed every frame to the core, add touches and log
@@ -20,7 +20,7 @@
 #include <string.h>
 #include <time.h>
 
-#define USAGE "usage: frame-finch VIDEO [-o OUT.html] [--touches FILE] [--log FILE] [--start HH:MM:SS.mmm] [--full | --pic-width N]"
+#define USAGE "usage: frame-finch VIDEO [-o OUT.html] [--touches FILE] [--log FILE] [--start HH:MM:SS.mmm|EPOCH_MS] [--full | --pic-width N]"
 
 static void die(const char *m)
 {
@@ -172,9 +172,13 @@ int main(int argc, char **argv)
     double near = created ? created * 1000.0 : time(NULL) * 1000.0;
     if (start)
     {
-        double w0 = hms_to_epoch(start, samsung ? near - dur * 1000 : near, utc_off);
+        // epoch ms is taken as is; anything else is HH:MM:SS.mmm phone time
+        char *end;
+        double w0 = strtod(start, &end);
+        if (strchr(start, ':') || *end || w0 < 1e11)
+            w0 = hms_to_epoch(start, samsung ? near - dur * 1000 : near, utc_off);
         if (w0 < 0)
-            die("--start wants HH:MM:SS.mmm");
+            die("--start wants HH:MM:SS.mmm or epoch ms");
         ff_set_wall(f, w0, "given with --start");
     }
 

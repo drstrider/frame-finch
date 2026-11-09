@@ -12,7 +12,7 @@ That puts a prebuilt `frame-finch` in `~/.local/bin` (Linux x86_64/arm64, macOS 
 
 ## Use
 
-    frame-finch VIDEO.mp4 [--log app.log] [--touches touches.txt] [--start HH:MM:SS.mmm] [--full] [-o OUT.html]
+    frame-finch VIDEO.mp4 [--log app.log] [--touches touches.txt] [--start HH:MM:SS.mmm|EPOCH_MS] [--full] [-o OUT.html]
 
 Or tell your agent "use frame-finch on this video".
 
@@ -22,6 +22,8 @@ Or tell your agent "use frame-finch on this video".
   frame's change boxes are in a JSON block (`<script id="data">`), and key frames are embedded (`<img id="fN">`) with the boxes drawn over them:
   540 px wide 64-colour PNGs, which keep text sharp and small, or a JPEG for a frame with too many shades (photos, video, gradients).
   `--full` embeds them at the video's own size.
+- **Touches:** each one is matched to the first frame that changed after it, even when that frame is inside a change that
+  was already under way, and a touch made during an ongoing change also says when that change stopped (how long a pause or a stop took).
 - **Clock:** a small box that changes once a second (for example a status-line clock in the app) is found by itself; the frames where it ticks over
   give the phone time in milliseconds, and the file's creation time picks the second (Samsung stamps the end of recording).
   Other steady blinkers (a cursor) are left out of the changes.

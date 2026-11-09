@@ -1038,14 +1038,26 @@ static void report(ff *f, FILE *o, const char *name)
         }
         else if (e[j].kind == 1)
         {
-            // a touch, and the first burst that starts after it
+            // a touch, and the first frame that really changed after it. That frame can sit inside a
+            // burst that began before the touch (a fading toast, a playing video), so look at frames,
+            // not at burst starts.
             touch *t = &f->tc[e[j].i];
             fprintf(o, "%9.1f  %s  TOUCH %s at (%d,%d)", t->t, w, t->kind == 'd' ? "down" : "up", t->x, t->y);
+            for (int i = 1; i < f->nfr; i++)
+            {
+                const frame *fr = &f->fr[i];
+                if (fr->t < t->t - 5 || active_cells(fr) < 2 || fr->burst < 0)
+                    continue;
+                fprintf(o, " -> first change %+.0f ms (#%d f%d), settled %+.0f ms", fr->t - t->t, fr->burst + 1, i,
+                        f->bu[fr->burst].t1 - t->t);
+                break;
+            }
+            // touched while the screen was already changing: when that change stopped (a pause, a stop)
             for (int b = 0; b < f->nbu; b++)
             {
-                if (f->bu[b].t0 >= t->t - 5)
+                if (f->bu[b].t0 < t->t - 5 && f->bu[b].t1 >= t->t)
                 {
-                    fprintf(o, " -> first change %+.0f ms (#%d), settled %+.0f ms", f->bu[b].t0 - t->t, b + 1, f->bu[b].t1 - t->t);
+                    fprintf(o, "; during #%d, which stopped %+.0f ms", b + 1, f->bu[b].t1 - t->t);
                     break;
                 }
             }
